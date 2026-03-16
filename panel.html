@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Messita — Panel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0A0A0A;
+  --surface:#141414;
+  --surface2:#1E1E1E;
+  --border:#2A2A2A;
+  --border2:#333;
+  --text:#F5F5F5;
+  --muted:#888;
+  --muted2:#555;
+  --orange:#FF5C1A;
+  --orange-dim:rgba(255,92,26,0.12);
+  --orange-glow:rgba(255,92,26,0.3);
+  --red:#FF3B30;
+  --green:#30D158;
+  --yellow:#FFD60A;
+}
+html,body{height:100%;font-family:'Nunito',sans-serif;background:var(--bg);color:var(--text);-webkit-font-smoothing:antialiased}
+
+/* ── LOGIN ── */
+#login-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;position:relative;overflow:hidden}
+.login-glow{position:absolute;top:0;left:50%;transform:translateX(-50%);width:700px;height:400px;background:radial-gradient(ellipse at 50% 0%,rgba(255,92,26,0.15) 0%,transparent 70%);pointer-events:none}
+.login-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:48px 44px;width:100%;max-width:420px;position:relative}
+.login-logo{font-size:26px;font-weight:900;color:#fff;text-align:center;margin-bottom:8px}
+.login-logo span{color:var(--orange)}
+.login-tagline{text-align:center;font-size:13px;color:var(--muted);font-weight:600;margin-bottom:36px}
+.login-tabs{display:flex;background:var(--surface2);border-radius:10px;padding:4px;margin-bottom:28px;gap:4px}
+.login-tab{flex:1;text-align:center;padding:9px;border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;transition:all .2s;border:none;font-family:'Nunito',sans-serif;color:var(--muted);background:transparent}
+.login-tab.active{background:var(--orange);color:#fff}
+.form-group{margin-bottom:16px}
+.form-label{font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:7px;display:block}
+.form-input{width:100%;background:var(--surface2);border:1.5px solid var(--border2);border-radius:10px;padding:12px 16px;font-family:'Nunito',sans-serif;font-size:14px;font-weight:600;color:var(--text);outline:none;transition:border-color .2s}
+.form-input:focus{border-color:var(--orange)}
+.form-input::placeholder{color:var(--muted2)}
+.btn-submit{width:100%;font-family:'Nunito',sans-serif;font-size:15px;font-weight:800;color:#fff;background:var(--orange);border:none;padding:15px;border-radius:12px;cursor:pointer;transition:all .2s;margin-top:8px;box-shadow:0 0 30px var(--orange-glow)}
+.btn-submit:hover{background:#e04d12;transform:translateY(-1px)}
+.btn-submit:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.login-error{background:rgba(255,59,48,.12);border:1px solid rgba(255,59,48,.3);color:var(--red);font-size:13px;font-weight:700;padding:10px 14px;border-radius:10px;margin-bottom:16px;display:none}
+.login-success{background:rgba(48,209,88,.12);border:1px solid rgba(48,209,88,.3);color:var(--green);font-size:13px;font-weight:700;padding:10px 14px;border-radius:10px;margin-bottom:16px;display:none}
+
+/* ── APP ── */
+#app-screen{display:none;height:100vh;overflow:hidden}
+.app-layout{display:grid;grid-template-columns:220px 1fr;height:100vh}
+
+/* SIDEBAR */
+.sidebar{background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:20px 14px;overflow-y:auto}
+.sidebar-logo{font-size:20px;font-weight:900;color:#fff;padding:8px 10px;margin-bottom:20px}
+.sidebar-logo span{color:var(--orange)}
+.sidebar-section{font-size:10px;font-weight:800;color:var(--muted2);letter-spacing:.8px;text-transform:uppercase;padding:8px 10px 4px;margin-top:8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;font-size:13px;font-weight:700;color:var(--muted);cursor:pointer;transition:all .2s;border:none;background:none;width:100%;text-align:left;font-family:'Nunito',sans-serif}
+.nav-item:hover,.nav-item.active{background:var(--surface2);color:#fff}
+.nav-item.active .nav-icon{color:var(--orange)}
+.nav-icon{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sidebar-bottom{margin-top:auto;border-top:1px solid var(--border);padding-top:14px}
+.user-info{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px}
+.user-avatar{width:34px;height:34px;border-radius:9px;background:var(--orange-dim);border:1px solid rgba(255,92,26,.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:var(--orange);flex-shrink:0}
+.user-name{font-size:13px;font-weight:800;color:#fff;line-height:1.2}
+.user-role{font-size:11px;color:var(--muted);font-weight:600}
+.btn-logout{width:100%;margin-top:8px;font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;color:var(--muted);background:none;border:1px solid var(--border);padding:8px;border-radius:8px;cursor:pointer;transition:all .2s}
+.btn-logout:hover{border-color:var(--red);color:var(--red)}
+
+/* MAIN */
+.main-content{overflow-y:auto;background:var(--bg)}
+.page{display:none;padding:32px;animation:fadeIn .3s ease}
+.page.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.page-header{margin-bottom:28px}
+.page-title{font-size:26px;font-weight:900;color:#fff;letter-spacing:-.5px}
+.page-sub{font-size:14px;color:var(--muted);font-weight:600;margin-top:4px}
+
+/* CARDS */
+.metrics-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px}
+.metric-label{font-size:11px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px}
+.metric-value{font-size:28px;font-weight:900;color:#fff;letter-spacing:-1px;margin-bottom:4px}
+.metric-change{font-size:12px;font-weight:700}
+.up{color:var(--green)}.down{color:var(--red)}
+
+/* RESERVAS */
+.res-toolbar{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;align-items:center}
+.res-filter{font-family:'Nunito',sans-serif;font-size:13px;font-weight:700;padding:8px 16px;border-radius:10px;border:1.5px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .2s}
+.res-filter.active,.res-filter:hover{background:var(--orange);color:#fff;border-color:var(--orange)}
+.btn-new{font-family:'Nunito',sans-serif;font-size:13px;font-weight:800;padding:9px 18px;border-radius:10px;border:none;background:var(--orange);color:#fff;cursor:pointer;margin-left:auto;transition:all .2s}
+.btn-new:hover{background:#e04d12}
+.res-table{width:100%;border-collapse:collapse}
+.res-table th{font-size:11px;font-weight:800;color:var(--muted2);text-transform:uppercase;letter-spacing:.5px;padding:10px 14px;text-align:left;border-bottom:1px solid var(--border)}
+.res-table td{padding:13px 14px;font-size:13px;font-weight:600;color:var(--text);border-bottom:1px solid var(--border)}
+.res-table tr:last-child td{border-bottom:none}
+.res-table tr:hover td{background:var(--surface2)}
+.badge{font-size:11px;font-weight:800;padding:4px 10px;border-radius:7px;white-space:nowrap}
+.b-green{background:rgba(48,209,88,.15);color:var(--green)}
+.b-yellow{background:rgba(255,214,10,.12);color:var(--yellow)}
+.b-orange{background:var(--orange-dim);color:var(--orange)}
+.b-red{background:rgba(255,59,48,.12);color:var(--red)}
+.b-gray{background:var(--surface2);color:var(--muted)}
+.table-wrap{background:var(--surface);border:1px solid var(--border);border-radius:16px;overflow:hidden}
+.empty-state{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;font-weight:600}
+.empty-state .empty-icon{font-size:40px;margin-bottom:12px}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:500;padding:20px;backdrop-filter:blur(4px)}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:36px;width:100%;max-width:480px}
+.modal-title{font-size:20px;font-weight:900;color:#fff;margin-bottom:24px}
+.modal-actions{display:flex;gap:10px;margin-top:24px}
+.btn-cancel{flex:1;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:13px;border-radius:10px;border:1.5px solid var(--border2);background:none;color:var(--muted);cursor:pointer}
+.btn-save{flex:2;font-family:'Nunito',sans-serif;font-size:14px;font-weight:800;padding:13px;border-radius:10px;border:none;background:var(--orange);color:#fff;cursor:pointer}
+.btn-save:hover{background:#e04d12}
+
+/* MESAS */
+.mesas-layout{display:grid;grid-template-columns:1fr 260px;gap:16px}
+.floor-plan{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:24px;min-height:500px;position:relative}
+.floor-title{font-size:13px;font-weight:800;color:var(--muted);margin-bottom:16px;text-transform:uppercase;letter-spacing:.5px}
+.mesas-map{position:relative;height:420px}
+.mesa-chip{position:absolute;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:12px;cursor:pointer;transition:all .2s;font-size:11px;font-weight:800;border:2px solid transparent;user-select:none}
+.mesa-chip:hover{transform:scale(1.08)}
+.mc-libre{background:rgba(48,209,88,.12);border-color:rgba(48,209,88,.3);color:var(--green)}
+.mc-ocupada{background:rgba(255,92,26,.12);border-color:rgba(255,92,26,.35);color:var(--orange)}
+.mc-reservada{background:rgba(255,214,10,.10);border-color:rgba(255,214,10,.3);color:var(--yellow)}
+.mesa-num{font-size:16px;font-weight:900}
+.mesa-cap{font-size:10px;opacity:.8}
+.mesa-detail{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.det-title{font-size:16px;font-weight:900;color:#fff}
+.det-row{display:flex;justify-content:space-between;font-size:13px}
+.det-key{color:var(--muted);font-weight:600}
+.det-val{color:#fff;font-weight:700}
+.legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.leg-item{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--muted)}
+.leg-dot{width:10px;height:10px;border-radius:3px}
+
+/* LOADING */
+.loading{display:flex;align-items:center;justify-content:center;height:200px;color:var(--muted);font-size:14px;font-weight:600;gap:10px}
+.spinner{width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--orange);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 20px;font-size:13px;font-weight:700;color:#fff;z-index:999;transform:translateY(100px);opacity:0;transition:all .3s;display:flex;align-items:center;gap:10px;max-width:320px}
+.toast.show{transform:translateY(0);opacity:1}
+.toast.success{border-color:rgba(48,209,88,.4)}
+.toast.error{border-color:rgba(255,59,48,.4)}
+
+@media(max-width:768px){
+  .app-layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .metrics-grid{grid-template-columns:repeat(2,1fr)}
+  .mesas-layout{grid-template-columns:1fr}
+  .page{padding:20px}
+}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-glow"></div>
+  <div class="login-box">
+    <div class="login-logo">messi<span>ta</span></div>
+    <div class="login-tagline">El sistema operativo de tu restaurante</div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" onclick="setTab('login')">Ingresar</button>
+      <button class="login-tab" onclick="setTab('register')">Registrarse</button>
+    </div>
+
+    <div id="login-error" class="login-error"></div>
+    <div id="login-success" class="login-success"></div>
+
+    <!-- LOGIN FORM -->
+    <div id="form-login">
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="login-email" class="form-input" type="email" placeholder="tu@restaurante.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input id="login-pass" class="form-input" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-submit" onclick="doLogin()" id="btn-login">Ingresar al panel</button>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="form-register" style="display:none">
+      <div class="form-group">
+        <label class="form-label">Nombre del restaurante</label>
+        <input id="reg-nombre" class="form-input" type="text" placeholder="La Cocina de Martina">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Email</label>
+        <input id="reg-email" class="form-input" type="email" placeholder="tu@restaurante.com">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input id="reg-pass" class="form-input" type="password" placeholder="Mínimo 6 caracteres">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Ciudad</label>
+        <input id="reg-ciudad" class="form-input" type="text" placeholder="Rosario">
+      </div>
+      <button class="btn-submit" onclick="doRegister()" id="btn-register">Crear cuenta gratis — 15 días</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-screen">
+  <div class="app-layout">
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+      <div class="sidebar-logo">messi<span>ta</span></div>
+      <div class="sidebar-section">Principal</div>
+      <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">📊</span>Dashboard</button>
+      <button class="nav-item" onclick="showPage('reservas',this)"><span class="nav-icon">📅</span>Reservas</button>
+      <button class="nav-item" onclick="showPage('mesas',this)"><span class="nav-icon">🗺️</span>Mesas</button>
+      <div class="sidebar-section">Módulos</div>
+      <button class="nav-item" onclick="showPage('carta',this)"><span class="nav-icon">📱</span>Carta Digital</button>
+      <button class="nav-item" onclick="showPage('giftcards',this)"><span class="nav-icon">🎁</span>Gift Cards</button>
+      <button class="nav-item" onclick="showPage('pos',this)"><span class="nav-icon">🍽️</span>Comandas / POS</button>
+      <div class="sidebar-section">Configuración</div>
+      <button class="nav-item" onclick="showPage('ajustes',this)"><span class="nav-icon">⚙️</span>Ajustes</button>
+      <div class="sidebar-bottom">
+        <div class="user-info">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div>
+            <div class="user-name" id="user-name">Cargando...</div>
+            <div class="user-role">Administrador</div>
+          </div>
+        </div>
+        <button class="btn-logout" onclick="doLogout()">Cerrar sesión</button>
+      </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-header">
+          <div class="page-title" id="dash-greeting">Bienvenido 👋</div>
+          <div class="page-sub" id="dash-date"></div>
+        </div>
+        <div class="metrics-grid">
+          <div class="metric-card">
+            <div class="metric-label">Reservas hoy</div>
+            <div class="metric-value" id="m-reservas">—</div>
+            <div class="metric-change up" id="m-reservas-sub"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Mesas activas</div>
+            <div class="metric-value" id="m-mesas">—</div>
+            <div class="metric-change" id="m-mesas-sub"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Gift Cards activas</div>
+            <div class="metric-value" id="m-giftcards">—</div>
+            <div class="metric-change up" id="m-gc-sub"></div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Platos en carta</div>
+            <div class="metric-value" id="m-platos">—</div>
+            <div class="metric-change" id="m-platos-sub"></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <div style="padding:20px 20px 12px;border-bottom:1px solid var(--border)">
+            <div style="font-size:15px;font-weight:800;color:#fff">Próximas reservas</div>
+          </div>
+          <div id="dash-reservas-list"><div class="loading"><div class="spinner"></div>Cargando...</div></div>
+        </div>
+      </div>
+
+      <!-- RESERVAS -->
+      <div class="page" id="page-reservas">
+        <div class="page-header">
+          <div class="page-title">Reservas</div>
+          <div class="page-sub">Gestioná todas las reservas de tu restaurante</div>
+        </div>
+        <div class="res-toolbar">
+          <button class="res-filter active" onclick="filterRes('todas',this)">Todas</button>
+          <button class="res-filter" onclick="filterRes('nueva',this)">Nuevas</button>
+          <button class="res-filter" onclick="filterRes('confirmada',this)">Confirmadas</button>
+          <button class="res-filter" onclick="filterRes('cancelada',this)">Canceladas</button>
+          <button class="btn-new" onclick="openModalReserva()">+ Nueva reserva</button>
+        </div>
+        <div class="table-wrap">
+          <table class="res-table">
+            <thead>
+              <tr>
+                <th>Cliente</th>
+                <th>Fecha</th>
+                <th>Hora</th>
+                <th>Personas</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="reservas-tbody">
+              <tr><td colspan="6"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- MESAS -->
+      <div class="page" id="page-mesas">
+        <div class="page-header">
+          <div class="page-title">Mesas</div>
+          <div class="page-sub">Mapa visual del salón</div>
+        </div>
+        <div class="legend">
+          <div class="leg-item"><div class="leg-dot" style="background:var(--green)"></div>Libre</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--orange)"></div>Ocupada</div>
+          <div class="leg-item"><div class="leg-dot" style="background:var(--yellow)"></div>Reservada</div>
+        </div>
+        <div class="mesas-layout">
+          <div class="floor-plan">
+            <div class="floor-title">Salón principal</div>
+            <div class="mesas-map" id="mesas-map"><div class="loading"><div class="spinner"></div>Cargando mesas...</div></div>
+          </div>
+          <div class="mesa-detail" id="mesa-detail">
+            <div class="det-title">Seleccioná una mesa</div>
+            <div style="font-size:13px;color:var(--muted);font-weight:600">Hacé click en el plano para ver el detalle.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARTA -->
+      <div class="page" id="page-carta">
+        <div class="page-header">
+          <div class="page-title">Carta Digital</div>
+          <div class="page-sub">Gestioná el menú de tu restaurante</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <button class="btn-new" onclick="openModalPlato()">+ Agregar plato</button>
+        </div>
+        <div class="table-wrap">
+          <table class="res-table">
+            <thead><tr><th>Plato</th><th>Categoría</th><th>Precio</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody id="carta-tbody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- GIFT CARDS -->
+      <div class="page" id="page-giftcards">
+        <div class="page-header">
+          <div class="page-title">Gift Cards</div>
+          <div class="page-sub">Vouchers activos en tu tienda online</div>
+        </div>
+        <div class="table-wrap">
+          <table class="res-table">
+            <thead><tr><th>Código</th><th>Comprador</th><th>Monto</th><th>Estado</th><th>Vence</th></tr></thead>
+            <tbody id="gc-tbody"><tr><td colspan="5"><div class="loading"><div class="spinner"></div>Cargando...</div></td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- POS -->
+      <div class="page" id="page-pos">
+        <div class="page-header">
+          <div class="page-title">Comandas / POS</div>
+          <div class="page-sub">Órdenes activas en cocina</div>
+        </div>
+        <div id="comandas-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px">
+          <div class="loading"><div class="spinner"></div>Cargando...</div>
+        </div>
+      </div>
+
+      <!-- AJUSTES -->
+      <div class="page" id="page-ajustes">
+        <div class="page-header">
+          <div class="page-title">Ajustes</div>
+          <div class="page-sub">Configuración de tu restaurante</div>
+        </div>
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:560px">
+          <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:20px">Datos del restaurante</div>
+          <div class="form-group"><label class="form-label">Nombre</label><input id="aj-nombre" class="form-input" type="text"></div>
+          <div class="form-group"><label class="form-label">Teléfono</label><input id="aj-tel" class="form-input" type="text"></div>
+          <div class="form-group"><label class="form-label">Dirección</label><input id="aj-dir" class="form-input" type="text"></div>
+          <div class="form-group"><label class="form-label">Ciudad</label><input id="aj-ciudad" class="form-input" type="text"></div>
+          <button class="btn-submit" style="max-width:200px" onclick="saveAjustes()">Guardar cambios</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RESERVA -->
+<div id="modal-reserva" style="display:none">
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">Nueva reserva</div>
+      <div class="form-group"><label class="form-label">Nombre del cliente</label><input id="r-nombre" class="form-input" type="text" placeholder="Martina García"></div>
+      <div class="form-group"><label class="form-label">Teléfono</label><input id="r-tel" class="form-input" type="text" placeholder="+54 341 555 1234"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="form-group"><label class="form-label">Fecha</label><input id="r-fecha" class="form-input" type="date"></div>
+        <div class="form-group"><label class="form-label">Hora</label><input id="r-hora" class="form-input" type="time"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Personas</label><input id="r-personas" class="form-input" type="number" value="2" min="1" max="50"></div>
+      <div class="form-group"><label class="form-label">Nota (opcional)</label><input id="r-nota" class="form-input" type="text" placeholder="Ej: cumpleaños, mesa romántica..."></div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-reserva')">Cancelar</button>
+        <button class="btn-save" onclick="saveReserva()">Guardar reserva</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL PLATO -->
+<div id="modal-plato" style="display:none">
+  <div class="modal-overlay">
+    <div class="modal">
+      <div class="modal-title">Agregar plato</div>
+      <div class="form-group"><label class="form-label">Nombre del plato</label><input id="p-nombre" class="form-input" type="text" placeholder="Milanesa napolitana"></div>
+      <div class="form-group"><label class="form-label">Descripción</label><input id="p-desc" class="form-input" type="text" placeholder="Con papas fritas..."></div>
+      <div class="form-group"><label class="form-label">Precio</label><input id="p-precio" class="form-input" type="number" placeholder="7500"></div>
+      <div class="form-group"><label class="form-label">Categoría</label>
+        <select id="p-cat" class="form-input" style="cursor:pointer">
+          <option value="">Seleccioná una categoría</option>
+        </select>
+      </div>
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal('modal-plato')">Cancelar</button>
+        <button class="btn-save" onclick="savePlato()">Guardar plato</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIGURACIÓN — REEMPLAZÁ ESTOS VALORES CON LOS TUYOS
+// ============================================================
+const SUPABASE_URL  = 'https://drvpordocgydmteqwfri.supabase.co';
+const SUPABASE_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRydnBvcmRvY2d5ZG10ZXF3ZnJpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzM2ODgxMTUsImV4cCI6MjA4OTI2NDExNX0.swBhvDNhNyTAlx_Hz2_lC2nj7l4Vkbl7rNpwucW2Zck'; // ← pegá tu anon key acá
+// ============================================================
+
+const { createClient } = supabase;
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let currentUser   = null;
+let currentRestId = null;
+let allReservas   = [];
+let currentFilter = 'todas';
+
+// ── AUTH ──────────────────────────────────────────────────
+function setTab(tab) {
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('form-login').style.display    = tab === 'login'    ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  clearMessages();
+}
+
+function clearMessages() {
+  document.getElementById('login-error').style.display   = 'none';
+  document.getElementById('login-success').style.display = 'none';
+}
+
+function showError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+function showSuccess(msg) {
+  const el = document.getElementById('login-success');
+  el.textContent = msg; el.style.display = 'block';
+}
+
+async function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  if (!email || !pass) return showError('Completá todos los campos.');
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true; btn.textContent = 'Ingresando...';
+  clearMessages();
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  btn.disabled = false; btn.textContent = 'Ingresar al panel';
+  if (error) return showError('Email o contraseña incorrectos.');
+  await initApp(data.user);
+}
+
+async function doRegister() {
+  const nombre  = document.getElementById('reg-nombre').value.trim();
+  const email   = document.getElementById('reg-email').value.trim();
+  const pass    = document.getElementById('reg-pass').value;
+  const ciudad  = document.getElementById('reg-ciudad').value.trim();
+  if (!nombre || !email || !pass) return showError('Completá todos los campos.');
+  if (pass.length < 6) return showError('La contraseña debe tener al menos 6 caracteres.');
+  const btn = document.getElementById('btn-register');
+  btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  clearMessages();
+
+  const { data, error } = await sb.auth.signUp({ email, password: pass });
+  if (error) { btn.disabled = false; btn.textContent = 'Crear cuenta gratis — 15 días'; return showError(error.message); }
+
+  // Crear restaurante
+  const slug = nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'');
+  const trialHasta = new Date(); trialHasta.setDate(trialHasta.getDate() + 15);
+
+  const { data: resto, error: restoErr } = await sb.from('restaurantes').insert({
+    nombre, slug: slug + '-' + Date.now(), email, ciudad,
+    plan: 'trial', trial_hasta: trialHasta.toISOString()
+  }).select().single();
+
+  if (restoErr) { btn.disabled = false; btn.textContent = 'Crear cuenta gratis — 15 días'; return showError('Error al crear el restaurante.'); }
+
+  // Crear usuario vinculado
+  await sb.from('usuarios').insert({ id: data.user.id, restaurante_id: resto.id, nombre, email, rol: 'admin' });
+
+  // Crear salón y mesas de ejemplo
+  const { data: salon } = await sb.from('salones').insert({ restaurante_id: resto.id, nombre: 'Salón principal' }).select().single();
+  if (salon) {
+    const mesas = [];
+    const positions = [{x:40,y:40},{x:140,y:40},{x:240,y:40},{x:340,y:40},{x:40,y:150},{x:140,y:150},{x:240,y:150},{x:340,y:150}];
+    for (let i = 0; i < 8; i++) {
+      mesas.push({ salon_id: salon.id, restaurante_id: resto.id, numero: i+1, capacidad: i < 4 ? 2 : 4, estado: 'libre', pos_x: positions[i].x, pos_y: positions[i].y });
+    }
+    await sb.from('mesas').insert(mesas);
+  }
+
+  btn.disabled = false; btn.textContent = 'Crear cuenta gratis — 15 días';
+  showSuccess('¡Cuenta creada! Revisá tu email para confirmar y luego ingresá.');
+}
+
+async function doLogout() {
+  await sb.auth.signOut();
+  document.getElementById('app-screen').style.display   = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  currentUser = null; currentRestId = null;
+}
+
+// ── INIT APP ──────────────────────────────────────────────
+async function initApp(user) {
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display   = 'block';
+
+  // Cargar usuario
+  const { data: usr } = await sb.from('usuarios').select('*,restaurantes(*)').eq('id', user.id).maybeSingle();
+console.log('Usuario cargado:', usr);
+if (!usr) { doLogout(); return; }
+  if (usr) {
+    currentRestId = usr.restaurante_id;
+    const nombreResto = usr.restaurantes?.nombre || usr.email;
+    document.getElementById('user-name').textContent    = nombreResto;
+    document.getElementById('user-avatar').textContent  = nombreResto[0].toUpperCase();
+    document.getElementById('dash-greeting').textContent = 'Hola, ' + nombreResto + ' 👋';
+
+    // Ajustes
+    if (usr.restaurantes) {
+      document.getElementById('aj-nombre').value = usr.restaurantes.nombre || '';
+      document.getElementById('aj-tel').value    = usr.restaurantes.telefono || '';
+      document.getElementById('aj-dir').value    = usr.restaurantes.direccion || '';
+      document.getElementById('aj-ciudad').value = usr.restaurantes.ciudad || '';
+    }
+  }
+
+  const now = new Date();
+  document.getElementById('dash-date').textContent = now.toLocaleDateString('es-AR', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
+
+  await loadDashboard();
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────
+async function loadDashboard() {
+  if (!currentRestId) return;
+  const today = new Date().toISOString().split('T')[0];
+
+  const [resReservas, resMesas, resGC, resPlatos] = await Promise.all([
+    sb.from('reservas').select('*').eq('restaurante_id', currentRestId).eq('fecha', today),
+    sb.from('mesas').select('*').eq('restaurante_id', currentRestId).eq('activa', true),
+    sb.from('gift_cards').select('*').eq('restaurante_id', currentRestId).eq('estado', 'activa'),
+    sb.from('platos').select('*').eq('restaurante_id', currentRestId).eq('disponible', true)
+  ]);
+
+  document.getElementById('m-reservas').textContent   = resReservas.data?.length ?? 0;
+  document.getElementById('m-mesas').textContent      = resMesas.data?.length ?? 0;
+  document.getElementById('m-giftcards').textContent  = resGC.data?.length ?? 0;
+  document.getElementById('m-platos').textContent     = resPlatos.data?.length ?? 0;
+
+  document.getElementById('m-mesas-sub').textContent  = (resMesas.data?.filter(m => m.estado === 'ocupada').length ?? 0) + ' ocupadas';
+  document.getElementById('m-reservas-sub').textContent = 'para hoy';
+  document.getElementById('m-gc-sub').textContent     = 'en circulación';
+  document.getElementById('m-platos-sub').textContent = 'disponibles';
+
+  // Próximas reservas
+  const tbody = document.getElementById('dash-reservas-list');
+  const proximas = resReservas.data?.filter(r => r.estado !== 'cancelada').sort((a,b) => a.hora.localeCompare(b.hora)).slice(0, 5) || [];
+  if (!proximas.length) {
+    tbody.innerHTML = '<div class="empty-state"><div class="empty-icon">📅</div>No hay reservas para hoy</div>';
+  } else {
+    tbody.innerHTML = '<table class="res-table"><thead><tr><th>Cliente</th><th>Hora</th><th>Personas</th><th>Estado</th></tr></thead><tbody>' +
+      proximas.map(r => `<tr><td>${r.nombre_cliente}</td><td>${r.hora.slice(0,5)}</td><td>${r.personas} pers.</td><td>${badgeHtml(r.estado)}</td></tr>`).join('') +
+      '</tbody></table>';
+  }
+}
+
+// ── RESERVAS ──────────────────────────────────────────────
+async function loadReservas() {
+  if (!currentRestId) return;
+  const { data } = await sb.from('reservas').select('*').eq('restaurante_id', currentRestId).order('fecha').order('hora');
+  allReservas = data || [];
+  renderReservas();
+}
+
+function filterRes(estado, btn) {
+  currentFilter = estado;
+  document.querySelectorAll('.res-filter').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderReservas();
+}
+
+function renderReservas() {
+  const list = currentFilter === 'todas' ? allReservas : allReservas.filter(r => r.estado === currentFilter);
+  const tbody = document.getElementById('reservas-tbody');
+  if (!list.length) {
+    tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-icon">📅</div>No hay reservas</div></td></tr>';
+    return;
+  }
+  tbody.innerHTML = list.map(r => `
+    <tr>
+      <td><strong>${r.nombre_cliente}</strong>${r.telefono ? '<br><span style="font-size:11px;color:var(--muted)">'+r.telefono+'</span>' : ''}</td>
+      <td>${new Date(r.fecha+'T12:00:00').toLocaleDateString('es-AR',{day:'2-digit',month:'short'})}</td>
+      <td>${r.hora.slice(0,5)} hs</td>
+      <td>${r.personas} pers.</td>
+      <td>${badgeHtml(r.estado)}</td>
+      <td style="display:flex;gap:6px">
+        ${r.estado === 'nueva' ? `<button onclick="updateReserva('${r.id}','confirmada')" style="font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;padding:5px 10px;border-radius:7px;border:none;background:rgba(48,209,88,.15);color:var(--green);cursor:pointer">✓ Confirmar</button>` : ''}
+        ${r.estado !== 'cancelada' ? `<button onclick="updateReserva('${r.id}','cancelada')" style="font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;padding:5px 10px;border-radius:7px;border:none;background:rgba(255,59,48,.12);color:var(--red);cursor:pointer">✕</button>` : ''}
+      </td>
+    </tr>`).join('');
+}
+
+async function updateReserva(id, estado) {
+  await sb.from('reservas').update({ estado }).eq('id', id);
+  showToast(estado === 'confirmada' ? '✅ Reserva confirmada' : '❌ Reserva cancelada', estado === 'confirmada' ? 'success' : 'error');
+  loadReservas();
+}
+
+function openModalReserva() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('r-fecha').value = today;
+  document.getElementById('r-hora').value  = '20:00';
+  document.getElementById('modal-reserva').style.display = 'flex';
+}
+
+async function saveReserva() {
+  const nombre  = document.getElementById('r-nombre').value.trim();
+  const tel     = document.getElementById('r-tel').value.trim();
+  const fecha   = document.getElementById('r-fecha').value;
+  const hora    = document.getElementById('r-hora').value;
+  const personas = parseInt(document.getElementById('r-personas').value);
+  const nota    = document.getElementById('r-nota').value.trim();
+  if (!nombre || !fecha || !hora) return showToast('Completá los campos obligatorios', 'error');
+  const { error } = await sb.from('reservas').insert({ restaurante_id: currentRestId, nombre_cliente: nombre, telefono: tel, fecha, hora, personas, nota, estado: 'nueva' });
+  if (error) return showToast('Error al guardar', 'error');
+  closeModal('modal-reserva');
+  showToast('✅ Reserva creada', 'success');
+  loadReservas(); loadDashboard();
+}
+
+// ── MESAS ─────────────────────────────────────────────────
+async function loadMesas() {
+  if (!currentRestId) return;
+  const { data, error } = await sb.from('mesas').select('*').eq('restaurante_id', currentRestId).order('numero');
+console.log('Mesas:', data, 'Error:', error);
+  const map = document.getElementById('mesas-map');
+  if (!data?.length) { map.innerHTML = '<div class="empty-state"><div class="empty-icon">🗺️</div>No hay mesas cargadas</div>'; return; }
+  map.innerHTML = '';
+  data.forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'mesa-chip mc-' + m.estado;
+    div.style.cssText = `left:${m.pos_x}px;top:${m.pos_y}px;width:70px;height:70px`;
+    div.innerHTML = `<div class="mesa-num">${m.numero}</div><div class="mesa-cap">${m.capacidad}p</div>`;
+    div.onclick = () => selectMesa(m);
+    map.appendChild(div);
+  });
+}
+
+function selectMesa(m) {
+  document.querySelectorAll('.mesa-chip').forEach(c => c.style.outline = 'none');
+  event.target.closest('.mesa-chip').style.outline = '2px solid var(--orange)';
+  const colores = { libre: 'var(--green)', ocupada: 'var(--orange)', reservada: 'var(--yellow)' };
+  document.getElementById('mesa-detail').innerHTML = `
+    <div class="det-title">Mesa ${m.numero}</div>
+    <div class="det-row"><span class="det-key">Estado</span><span class="det-val" style="color:${colores[m.estado]}">${m.estado.charAt(0).toUpperCase()+m.estado.slice(1)}</span></div>
+    <div class="det-row"><span class="det-key">Capacidad</span><span class="det-val">${m.capacidad} personas</span></div>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">
+      <button onclick="changeMesa('${m.id}','libre')" style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;padding:9px;border-radius:9px;border:none;background:rgba(48,209,88,.15);color:var(--green);cursor:pointer;width:100%">Marcar libre</button>
+      <button onclick="changeMesa('${m.id}','ocupada')" style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;padding:9px;border-radius:9px;border:none;background:var(--orange-dim);color:var(--orange);cursor:pointer;width:100%">Marcar ocupada</button>
+      <button onclick="changeMesa('${m.id}','reservada')" style="font-family:'Nunito',sans-serif;font-size:12px;font-weight:800;padding:9px;border-radius:9px;border:none;background:rgba(255,214,10,.12);color:var(--yellow);cursor:pointer;width:100%">Marcar reservada</button>
+    </div>`;
+}
+
+async function changeMesa(id, estado) {
+  await sb.from('mesas').update({ estado }).eq('id', id);
+  showToast('Mesa actualizada', 'success');
+  loadMesas();
+}
+
+// ── CARTA ─────────────────────────────────────────────────
+async function loadCarta() {
+  if (!currentRestId) return;
+  const { data } = await sb.from('platos').select('*,categorias_carta(nombre)').eq('restaurante_id', currentRestId).order('nombre');
+  const tbody = document.getElementById('carta-tbody');
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">📱</div>No hay platos. Agregá el primero.</div></td></tr>'; return; }
+  tbody.innerHTML = data.map(p => `
+    <tr>
+      <td><strong>${p.nombre}</strong>${p.descripcion ? '<br><span style="font-size:11px;color:var(--muted)">'+p.descripcion+'</span>' : ''}</td>
+      <td>${p.categorias_carta?.nombre || '—'}</td>
+      <td>$${Number(p.precio).toLocaleString('es-AR')}</td>
+      <td>${p.disponible ? '<span class="badge b-green">Disponible</span>' : '<span class="badge b-gray">No disponible</span>'}</td>
+      <td><button onclick="togglePlato('${p.id}',${!p.disponible})" style="font-family:'Nunito',sans-serif;font-size:11px;font-weight:800;padding:5px 10px;border-radius:7px;border:none;background:var(--surface2);color:var(--muted);cursor:pointer">${p.disponible ? 'Deshabilitar' : 'Habilitar'}</button></td>
+    </tr>`).join('');
+
+  // Cargar categorías para el modal
+  const { data: cats } = await sb.from('categorias_carta').select('*').eq('restaurante_id', currentRestId);
+  const sel = document.getElementById('p-cat');
+  sel.innerHTML = '<option value="">Sin categoría</option>' + (cats || []).map(c => `<option value="${c.id}">${c.nombre}</option>`).join('');
+}
+
+async function togglePlato(id, disponible) {
+  await sb.from('platos').update({ disponible }).eq('id', id);
+  showToast('Plato actualizado', 'success');
+  loadCarta();
+}
+
+function openModalPlato() {
+  document.getElementById('modal-plato').style.display = 'flex';
+}
+
+async function savePlato() {
+  const nombre = document.getElementById('p-nombre').value.trim();
+  const desc   = document.getElementById('p-desc').value.trim();
+  const precio = parseFloat(document.getElementById('p-precio').value);
+  const catId  = document.getElementById('p-cat').value || null;
+  if (!nombre || !precio) return showToast('Nombre y precio son obligatorios', 'error');
+  const { error } = await sb.from('platos').insert({ restaurante_id: currentRestId, categoria_id: catId, nombre, descripcion: desc, precio, disponible: true });
+  if (error) return showToast('Error al guardar', 'error');
+  closeModal('modal-plato');
+  showToast('✅ Plato agregado', 'success');
+  loadCarta();
+}
+
+// ── GIFT CARDS ────────────────────────────────────────────
+async function loadGiftCards() {
+  if (!currentRestId) return;
+  const { data } = await sb.from('gift_cards').select('*').eq('restaurante_id', currentRestId).order('creado_en', { ascending: false });
+  const tbody = document.getElementById('gc-tbody');
+  if (!data?.length) { tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state"><div class="empty-icon">🎁</div>No hay gift cards vendidas todavía</div></td></tr>'; return; }
+  tbody.innerHTML = data.map(g => `
+    <tr>
+      <td><code style="font-size:12px;background:var(--surface2);padding:3px 8px;border-radius:5px">${g.codigo}</code></td>
+      <td>${g.comprador_nombre || '—'}</td>
+      <td>$${Number(g.monto).toLocaleString('es-AR')}</td>
+      <td>${badgeHtml(g.estado)}</td>
+      <td>${g.vence_en ? new Date(g.vence_en+'T12:00:00').toLocaleDateString('es-AR') : '—'}</td>
+    </tr>`).join('');
+}
+
+// ── COMANDAS ──────────────────────────────────────────────
+async function loadComandas() {
+  if (!currentRestId) return;
+  const { data } = await sb.from('comandas').select('*,mesas(numero),comanda_items(*)').eq('restaurante_id', currentRestId).neq('estado','cerrada').order('creado_en');
+  const grid = document.getElementById('comandas-grid');
+  if (!data?.length) { grid.innerHTML = '<div class="empty-state"><div class="empty-icon">🍽️</div>No hay comandas activas</div>'; return; }
+  grid.innerHTML = data.map(c => {
+    const colorClass = c.estado === 'abierta' ? 'var(--orange)' : c.estado === 'lista' ? 'var(--green)' : 'var(--muted)';
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px">
+      <div style="display:flex;justify-content:space-between;margin-bottom:12px">
+        <div style="font-size:16px;font-weight:900;color:#fff">Mesa ${c.mesas?.numero || '?'}</div>
+        <span style="font-size:11px;font-weight:800;color:${colorClass}">${c.estado.toUpperCase()}</span>
+      </div>
+      ${(c.comanda_items||[]).map(i=>`<div style="font-size:12px;font-weight:600;color:var(--muted);padding:4px 0;border-bottom:1px solid var(--border)">x${i.cantidad} ${i.nombre_plato}</div>`).join('')}
+      <div style="display:flex;justify-content:space-between;margin-top:12px;font-size:14px;font-weight:800">
+        <span style="color:var(--muted)">Total</span>
+        <span style="color:#fff">$${Number(c.total).toLocaleString('es-AR')}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── AJUSTES ───────────────────────────────────────────────
+async function saveAjustes() {
+  const updates = {
+    nombre:    document.getElementById('aj-nombre').value.trim(),
+    telefono:  document.getElementById('aj-tel').value.trim(),
+    direccion: document.getElementById('aj-dir').value.trim(),
+    ciudad:    document.getElementById('aj-ciudad').value.trim(),
+  };
+  const { error } = await sb.from('restaurantes').update(updates).eq('id', currentRestId);
+  if (error) return showToast('Error al guardar', 'error');
+  showToast('✅ Cambios guardados', 'success');
+}
+
+// ── HELPERS ───────────────────────────────────────────────
+function badgeHtml(estado) {
+  const map = { nueva:'b-orange', confirmada:'b-green', cancelada:'b-red', finalizada:'b-gray', activa:'b-green', usada:'b-gray', vencida:'b-red', abierta:'b-orange', lista:'b-green', cerrada:'b-gray' };
+  return `<span class="badge ${map[estado]||'b-gray'}">${estado.charAt(0).toUpperCase()+estado.slice(1)}</span>`;
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+
+const pageLoaders = { reservas: loadReservas, mesas: loadMesas, carta: loadCarta, giftcards: loadGiftCards, pos: loadComandas };
+
+function showPage(name, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  btn.classList.add('active');
+  if (pageLoaders[name]) pageLoaders[name]();
+}
+
+// ── SESIÓN PERSISTENTE ────────────────────────────────────
+sb.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'SIGNED_IN' && session) {
+    await initApp(session.user);
+  }
+});
+</script>
+</body>
+</html>
